@@ -154,9 +154,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.BUILD_DATE }}_${{ inputs.model }}
-           files: |
-          ${{ inputs.model == 'n1_immwrt' && env.PACKAGED_OUTPUTPATH || './firmware' }}/*.bin
-          files: | 
-          ${{ inputs.model == 'n1_immwrt' && env.PACKAGED_OUTPUTPATH || './firmware' }}/*.bin
-          ./ipk_collector/luci-packages.tar.gz
+          files: ${{ inputs.model == 'n1_immwrt' && env.PACKAGED_OUTPUTPATH || './firmware' }}/*.bin
+          files: luci-packages.tar.gz
           body_path: ./release_body.txt
