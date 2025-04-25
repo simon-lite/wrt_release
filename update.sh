@@ -298,7 +298,13 @@ fix_build_for_openssl() {
 }
 
 copy_network_test_app() {
-    cp -rf "$BASE_PATH/luci-app-network-test" "$BUILD_DIR/package/"
+    echo "===== Copying network-test app ====="
+    local pkg_dir="$BUILD_DIR/package/luci-app-network-test"
+    rm -rf "$pkg_dir"
+    mkdir -p "$pkg_dir"
+    cp -rf "$BASE_PATH/luci-app-network-test/." "$pkg_dir/"
+    echo "Copied files:"
+    tree -L 3 "$pkg_dir"
 }
 
 update_ath11k_fw() {
