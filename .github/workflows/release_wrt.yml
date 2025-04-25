@@ -102,11 +102,25 @@ jobs:
         
       - name: Collect Luci Packages
         run: |
+          echo "📦 正在收集 luci 相关 IPK 包..."
           mkdir -p ./ipk_collector
-          # 使用find命令精确匹配路径
-          find ./action_build/bin/packages -type f -path "*/luci/*.ipk" -exec cp -v --parents -t ./ipk_collector {} +
-          # 压缩为单独文件（可选）
-          tar -czvf luci-packages.tar.gz -C ./ipk_collector .
+
+          PKG_PATH="./action_build/bin/packages"
+
+          if [ -d "$PKG_PATH" ]; then
+            find "$PKG_PATH" -type f -path "*/base/*luci*.ipk" -exec cp -v --parents -t ./ipk_collector {} +
+          else
+            echo "⚠️ 路径 $PKG_PATH 不存在，可能编译失败或目录结构不同"
+          fi
+
+          PKG_COUNT=$(find ./ipk_collector -type f | wc -l)
+
+          if [ "$PKG_COUNT" -gt 0 ]; then
+            echo "✅ 找到 $PKG_COUNT 个 luci 相关 IPK 包，开始打包..."
+            tar -czvf luci-packages.tar.gz -C ./ipk_collector .
+          else
+            echo "⚠️ 没有找到 luci 相关 IPK 包，跳过打包"
+          fi
       - name: Get Kernel Verion
         run: |
           # 获取内核版本
