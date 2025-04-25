@@ -1,0 +1,14 @@
+#!/bin/sh
+
+# Install fping if not present
+[ -x /usr/bin/fping ] || opkg update && opkg install fping
+
+# Ensure correct permissions
+chmod 644 /usr/lib/lua/luci/controller/admin/network-test.lua
+chmod 644 /usr/lib/lua/luci/view/network-test.htm
+chmod 755 /usr/bin/fping 2>/dev/null
+
+# Clean cache
+rm -rf /tmp/luci-modulecache/*
+
+exit 0
