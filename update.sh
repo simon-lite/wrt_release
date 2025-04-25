@@ -297,6 +297,24 @@ fix_build_for_openssl() {
     fi
 }
 
+copy_network_test_app() {
+    local source_dir="$BASE_PATH/luci-app-network-test"
+    local target_dir="$BUILD_DIR/package/luci-app-network-test"
+
+    if [ ! -d "$target_dir" ]; then
+        if [ -d "$source_dir" ]; then
+            echo "Copying luci-app-network-test to $BUILD_DIR/package..."
+            cp -rf "$source_dir" "$(dirname "$target_dir")"
+            echo "Done."
+        else
+            echo "Error: Source directory $source_dir does not exist." >&2
+            return 1
+        fi
+    else
+        echo "Note: $target_dir already exists, skipping copy."
+    fi
+}
+
 update_ath11k_fw() {
     local makefile="$BUILD_DIR/package/firmware/ath11k-firmware/Makefile"
     local new_mk="$BASE_PATH/patches/ath11k_fw.mk"
