@@ -108,7 +108,7 @@ jobs:
           PKG_PATH="./action_build/bin/packages"
 
           if [ -d "$PKG_PATH" ]; then
-            find "$PKG_PATH" -type f -path "*/base/*luci*.ipk" -exec cp -v --parents -t ./ipk_collector {} +
+            find "$PKG_PATH" -type f -path "*/base/luci*.ipk" -exec cp -v --parents -t ./ipk_collector {} +
           else
             echo "⚠️ 路径 $PKG_PATH 不存在，可能编译失败或目录结构不同"
           fi
