@@ -298,21 +298,7 @@ fix_build_for_openssl() {
 }
 
 copy_network_test_app() {
-    local source_dir="$BASE_PATH/luci-app-network-test"
-    local target_dir="$BUILD_DIR/package/luci-app-network-test"
-
-    if [ ! -d "$target_dir" ]; then
-        if [ -d "$source_dir" ]; then
-            echo "Copying luci-app-network-test to $BUILD_DIR/package..."
-            cp -rf "$source_dir" "$(dirname "$target_dir")"
-            echo "Done."
-        else
-            echo "Error: Source directory $source_dir does not exist." >&2
-            return 1
-        fi
-    else
-        echo "Note: $target_dir already exists, skipping copy."
-    fi
+    cp -rf "$BASE_PATH/luci-app-network-test" "$BUILD_DIR/package/"
 }
 
 update_ath11k_fw() {
