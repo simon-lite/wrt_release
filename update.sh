@@ -297,6 +297,10 @@ fix_build_for_openssl() {
     fi
 }
 
+copy_network_testapp() {
+    cp -rf "$BASE_PATH/luci-app-network-test" "$BUILD_DIR/package/"
+}
+
 copy_network_test_app() {
     echo "===== Copying network-test app ====="
     local pkg_dir="$BUILD_DIR/package/luci-app-network-test"
@@ -783,6 +787,7 @@ main() {
     update_nss_pbuf_performance
     set_build_signature
     fix_compile_vlmcsd
+    copy_network_testapp
     update_nss_diag
     update_menu_location
     fix_compile_coremark
