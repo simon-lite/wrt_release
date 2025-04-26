@@ -99,28 +99,38 @@ jobs:
 
       - name: Build Firmware
         run: ./build.sh ${{ inputs.model }}
-        
+
       - name: Collect Luci Packages
         run: |
           echo "📦 正在收集 luci 相关 IPK 包..."
-          mkdir -p ./ipk_collector
 
           PKG_PATH="./action_build/bin/packages"
+          OUT_DIR="./firmware"
 
-          if [ -d "$PKG_PATH" ]; then
-            find "$PKG_PATH" -type f -path "*/base/luci*.ipk" -exec cp -v --parents -t ./ipk_collector {} +
-          else
-            echo "⚠️ 路径 $PKG_PATH 不存在，可能编译失败或目录结构不同"
+          mkdir -p ./ipk_collector
+          mkdir -p "$OUT_DIR"
+
+          if [ ! -d "$PKG_PATH" ]; then
+          echo "❌ 找不到目录 $PKG_PATH，可能是构建失败或者路径配置有误"
+          exit 0
           fi
 
-          PKG_COUNT=$(find ./ipk_collector -type f | wc -l)
+          echo "✅ 开始查找 luci IPK 包..."
 
-          if [ "$PKG_COUNT" -gt 0 ]; then
-            echo "✅ 找到 $PKG_COUNT 个 luci 相关 IPK 包，开始打包..."
-            tar -czvf luci-packages.tar.gz -C ./ipk_collector .
-          else
-            echo "⚠️ 没有找到 luci 相关 IPK 包，跳过打包"
-          fi
+          # 搜索 base 和 luci 目录中含有 luci 的 ipk 包
+            find "$PKG_PATH" -type f \( \
+            -path "*/base/*luci*.ipk" -o \
+            -path "*/luci/*luci*.ipk" \
+            \) -exec cp -v --parents -t ./ipk_collector {} +
+
+            PKG_COUNT=$(find ./ipk_collector -type f | wc -l)
+
+            if [ "$PKG_COUNT" -gt 0 ]; then
+            echo "✅ 找到 $PKG_COUNT 个 luci IPK 包，正在打包到 firmware/"
+            tar -czvf "$OUT_DIR/luci-packages.tar.gz" -C ./ipk_collector .
+            else
+            echo "⚠️ 没有找到 luci IPK 包，跳过打包"
+            fi
       - name: Get Kernel Verion
         run: |
           # 获取内核版本
@@ -168,7 +178,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.BUILD_DATE }}_${{ inputs.model }}
-          files: |
-            ${{ inputs.model == 'n1_immwrt' && env.PACKAGED_OUTPUTPATH || './firmware' }}/*.*
-            ./luci-packages.tar.gz
+          files: ${{ inputs.model == 'n1_immwrt' && env.PACKAGED_OUTPUTPATH || './firmware' }}/*.*
           body_path: ./release_body.txt
