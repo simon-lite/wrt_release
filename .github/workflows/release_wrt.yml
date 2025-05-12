@@ -24,6 +24,7 @@ on:
           - zn_m2_immwrt
           - zn_m2_libwrt
           - x64_immwrt
+          - m2_im
       runs-on:
         required: true
         description: Runs on...
