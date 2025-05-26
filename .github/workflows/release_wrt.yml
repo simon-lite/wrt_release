@@ -11,6 +11,7 @@ on:
         default: ax1800pro_immwrt
         options:
           - ax1800pro_immwrt
+          - ax1800pro_libwrt
           - aliyun_ap8220_immwrt
           - cmcc_rax3000m_immwrt
           - jdcloud_ax6000_immwrt
