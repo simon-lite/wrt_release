@@ -27,6 +27,7 @@ on:
           - x64_immwrt
           - m2_im
           - m2_lib
+          - 1800pro_lib
       runs-on:
         required: true
         description: Runs on...
