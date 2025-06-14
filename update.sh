@@ -24,7 +24,7 @@ FEEDS_CONF="feeds.conf.default"
 GOLANG_REPO="https://github.com/sbwml/packages_lang_golang"
 GOLANG_BRANCH="24.x"
 THEME_SET="argon"
-LAN_ADDR="192.168.3.1"
+LAN_ADDR="192.168.1.1"
 
 clone_repo() {
     if [[ ! -d $BUILD_DIR ]]; then
@@ -100,9 +100,6 @@ remove_unwanted_packages() {
         "shadowsocksr-libev" "dae" "daed" "mihomo" "geoview" "tailscale" "open-app-filter"
         "msd_lite"
     )
-    local packages_utils=(
-        "cups"
-    )
     local small8_packages=(
         "ppp" "firewall" "dae" "daed" "daed-next" "libnftnl" "nftables" "dnsmasq"
     )
@@ -119,12 +116,6 @@ remove_unwanted_packages() {
     for pkg in "${packages_net[@]}"; do
         if [[ -d ./feeds/packages/net/$pkg ]]; then
             \rm -rf ./feeds/packages/net/$pkg
-        fi
-    done
-
-    for pkg in "${packages_utils[@]}"; do
-        if [[ -d ./feeds/packages/utils/$pkg ]]; then
-            \rm -rf ./feeds/packages/utils/$pkg
         fi
     done
 
@@ -165,7 +156,7 @@ install_small8() {
         luci-app-store quickstart luci-app-quickstart luci-app-istorex luci-app-cloudflarespeedtest \
         luci-theme-argon netdata luci-app-netdata lucky luci-app-lucky luci-app-openclash luci-app-homeproxy \
         luci-app-amlogic nikki luci-app-nikki tailscale luci-app-tailscale oaf open-app-filter luci-app-oaf \
-        easytier luci-app-easytier msd_lite luci-app-msd_lite 
+        easytier luci-app-easytier msd_lite luci-app-msd_lite
 }
 
 install_feeds() {
@@ -281,6 +272,7 @@ remove_something_nss_kmod() {
         sed -i '/kmod-qca-nss-drv-wifi-meshmgr/d' $ipq_mk_path
         sed -i '/kmod-qca-nss-macsec/d' $ipq_mk_path
 
+        sed -i 's/automount //g' $ipq_mk_path
         sed -i 's/cpufreq //g' $ipq_mk_path
     fi
 }
@@ -305,20 +297,6 @@ fix_build_for_openssl() {
             cp -rf "$BASE_PATH/patches/openssl" "$openssl_dir"
         fi
     fi
-}
-
-copy_network_testapp() {
-    cp -rf "$BASE_PATH/luci-app-network-test" "$BUILD_DIR/package/"
-}
-
-copy_network_test_app() {
-    echo "===== Copying network-test app ====="
-    local pkg_dir="$BUILD_DIR/package/luci-app-network-test"
-    rm -rf "$pkg_dir"
-    mkdir -p "$pkg_dir"
-    cp -rf "$BASE_PATH/luci-app-network-test/." "$pkg_dir/"
-    echo "Copied files:"
-    tree -L 3 "$pkg_dir"
 }
 
 update_ath11k_fw() {
@@ -838,7 +816,6 @@ main() {
     update_nss_pbuf_performance
     set_build_signature
     fix_compile_vlmcsd
-    copy_network_testapp
     update_nss_diag
     update_menu_location
     fix_compile_coremark
@@ -860,8 +837,8 @@ main() {
     update_geoip
     update_package "runc" "releases" "v1.2.6"
     update_package "containerd" "releases" "v1.7.27"
-    update_package "docker" "tags" "v28.2.2"
-    update_package "dockerd" "releases" "v28.2.2"
+    update_package "docker" "tags"
+    update_package "dockerd"
     # update_package "xray-core"
     # update_proxy_app_menu_location
     # update_dns_app_menu_location
