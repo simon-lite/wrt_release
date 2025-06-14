@@ -10,23 +10,23 @@ on:
         type: choice
         default: ax1800pro_immwrt
         options:
+          - x64_immwrt
+          - n1_immwrt
+          - m2_im
+          - m2_lib
           - ax1800pro_immwrt
           - ax1800pro_libwrt
-          - aliyun_ap8220_immwrt
-          - cmcc_rax3000m_immwrt
-          - jdcloud_ax6000_immwrt
+          - zn_m2_immwrt
+          - zn_m2_libwrt
           - jdcloud_ipq60xx_immwrt
           - jdcloud_ipq60xx_libwrt
-          - n1_immwrt
+          - jdcloud_ax6000_immwrt
           - redmi_ax5_immwrt
           - redmi_ax6_immwrt
           - redmi_ax6_libwrt
-          - redmi_ax6000_immwrt21
-          - zn_m2_immwrt
-          - zn_m2_libwrt
-          - x64_immwrt
-          - m2_im
-          - m2_lib
+          - redmi_ax6000_immwrt
+          - aliyun_ap8220_immwrt
+          - cmcc_rax3000m_immwrt
           - 1800pro_lib
       runs-on:
         required: true
@@ -34,11 +34,9 @@ on:
         type: choice
         default: ubuntu-22.04
         options:
-          - ubuntu-20.04
           - ubuntu-22.04
           - ubuntu-24.04
           - ubuntu-24.10
-
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
