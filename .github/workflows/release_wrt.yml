@@ -112,7 +112,6 @@ jobs:
           OUT_DIR="./firmware"
 
           mkdir -p ./ipk_collector
-          mkdir -p "$OUT_DIR"
 
           if [ ! -d "$PKG_PATH" ]; then
           echo "❌ 找不到目录 $PKG_PATH，可能是构建失败或者路径配置有误"
@@ -125,7 +124,7 @@ jobs:
             find "$PKG_PATH" -type f \( \
             -path "*/base/*luci*.ipk" -o \
             -path "*/luci/*luci*.ipk" \
-            \) -exec cp -v --parents -t ./ipk_collector {} +
+            \) -exec cp -v ./ipk_collector {} +
 
             PKG_COUNT=$(find ./ipk_collector -type f | wc -l)
 
