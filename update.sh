@@ -23,7 +23,8 @@ set -o errtrace
 error_handler() {
     echo "Error occurred in script at line: ${BASH_LINENO[0]}, command: '${BASH_COMMAND}'"
 }
-
+# 增加编译时间显示
+BUILD_DATE=$(date '+%Y.%m.%d')
 # 设置trap捕获ERR信号
 trap 'error_handler' ERR
 
@@ -38,7 +39,7 @@ FEEDS_CONF="feeds.conf.default"
 GOLANG_REPO="https://github.com/sbwml/packages_lang_golang"
 GOLANG_BRANCH="25.x"
 THEME_SET="argon"
-LAN_ADDR="192.168.1.1"
+LAN_ADDR="192.168.3.1"
 
 clone_repo() {
     if [[ ! -d $BUILD_DIR ]]; then
@@ -291,7 +292,6 @@ remove_something_nss_kmod() {
         sed -i '/kmod-qca-nss-drv-wifi-meshmgr/d' "$ipq_mk_path"
         sed -i '/kmod-qca-nss-macsec/d' "$ipq_mk_path"
 
-        sed -i 's/automount //g' "$ipq_mk_path"
         sed -i 's/cpufreq //g' "$ipq_mk_path"
     fi
 }
@@ -514,7 +514,7 @@ update_nss_pbuf_performance() {
 set_build_signature() {
     local file="$BUILD_DIR/feeds/luci/modules/luci-mod-status/htdocs/luci-static/resources/view/status/include/10_system.js"
     if [ -d "$(dirname "$file")" ] && [ -f $file ]; then
-        sed -i "s/(\(luciversion || ''\))/(\1) + (' \/ build by ZqinKing')/g" "$file"
+        sed -i "s/(\(luciversion || ''\))/(\1) + (' \/ build by Simon on $BUILD_DATE')/g" "$file"
     fi
 }
 
