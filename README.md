@@ -17,19 +17,22 @@ sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_e
 
 1.  克隆仓库：
     ```bash
-    git clone https://github.com/ZqinKing/wrt_release.git
+    git clone https://github.com/simon-lite/wrt_release.git
     ```
 2.  进入目录：
     ```bash
-    cd wrt_relese
+    cd wrt_release
     ```
 
 ## 4. 编译固件
 
 使用 `./build.sh` 脚本进行编译，支持以下设备：
 
-### 京东云
 
+### 京东云亚瑟(01)、兆能M2**:
+    ```bash
+    ./build.sh ipq60xx_immwrt
+    ```
 *   **雅典娜(02)、亚瑟(01)、太乙(07)、AX5(JDC版)**:
     ```bash
     ./build.sh jdcloud_ipq60xx_immwrt
