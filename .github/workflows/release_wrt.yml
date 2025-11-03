@@ -8,12 +8,13 @@ on:
         required: true
         description: Device Model
         type: choice
-        default: ipq60xx_immwrt
+        default: jdm2
         options:
           - aliyun_ap8220_immwrt
           - cmcc_rax3000m_immwrt
           - jdcloud_ax6000_immwrt
           - ipq60xx_immwrt
+          - jdm2
           - jdcloud_ipq60xx_libwrt
           - linksys_mx4x00_immwrt
           - n1_immwrt
