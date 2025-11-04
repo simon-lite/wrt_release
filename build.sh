@@ -16,7 +16,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 set -e
-
 BASE_PATH=$(cd $(dirname $0) && pwd)
 
 Dev=$1
@@ -82,7 +81,7 @@ fi
 $BASE_PATH/update.sh "$REPO_URL" "$REPO_BRANCH" "$BASE_PATH/$BUILD_DIR" "$COMMIT_HASH"
 
 apply_config
-remove_uhttpd_dependency
+#remove_uhttpd_dependency
 
 cd "$BASE_PATH/$BUILD_DIR"
 make defconfig
