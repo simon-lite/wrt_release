@@ -23,8 +23,10 @@ set -o errtrace
 error_handler() {
     echo "Error occurred in script at line: ${BASH_LINENO[0]}, command: '${BASH_COMMAND}'"
 }
-# 增加编译时间显示
+
+# 编译时间显示
 BUILD_DATE=$(date '+%Y.%m.%d')
+
 # 设置trap捕获ERR信号
 trap 'error_handler' ERR
 
