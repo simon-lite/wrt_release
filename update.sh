@@ -24,7 +24,7 @@ error_handler() {
     echo "Error occurred in script at line: ${BASH_LINENO[0]}, command: '${BASH_COMMAND}'"
 }
 
-# 编译时间显示
+# 增加编译时间显示
 BUILD_DATE=$(date '+%Y.%m.%d')
 
 # 设置trap捕获ERR信号
@@ -201,6 +201,30 @@ install_fullconenat() {
     fi
 }
 
+check_default_settings() {
+    local settings_dir="$BUILD_DIR/package/emortal/default-settings"
+    if [ ! -d "$settings_dir" ]; then
+        echo "目录 $settings_dir 不存在，正在从 immortalwrt 仓库克隆..."
+        local tmp_dir
+        tmp_dir=$(mktemp -d)
+        if git clone --depth 1 --filter=blob:none --sparse https://github.com/immortalwrt/immortalwrt.git "$tmp_dir"; then
+            pushd "$tmp_dir" > /dev/null
+            git sparse-checkout set package/emortal/default-settings
+            # 确保目标父目录存在
+            mkdir -p "$(dirname "$settings_dir")"
+            # 移动 default-settings 目录
+            mv package/emortal/default-settings "$settings_dir"
+            popd > /dev/null
+            rm -rf "$tmp_dir"
+            echo "default-settings 克隆并移动成功。"
+        else
+            echo "错误：克隆 immortalwrt 仓库失败" >&2
+            rm -rf "$tmp_dir"
+            exit 1
+        fi
+    fi
+}
+
 install_feeds() {
     ./scripts/feeds update -i
     for dir in $BUILD_DIR/feeds/*; do
@@ -222,8 +246,9 @@ fix_default_set() {
         find "$BUILD_DIR/feeds/luci/collections/" -type f -name "Makefile" -exec sed -i "s/luci-theme-bootstrap/luci-theme-$THEME_SET/g" {} \;
     fi
 
-    install -Dm755 "$BASE_PATH/patches/990_set_argon_primary" "$BUILD_DIR/package/base-files/files/etc/uci-defaults/990_set_argon_primary"
-    install -Dm755 "$BASE_PATH/patches/991_custom_settings" "$BUILD_DIR/package/base-files/files/etc/uci-defaults/991_custom_settings"
+    install -Dm544 "$BASE_PATH/patches/990_set_argon_primary" "$BUILD_DIR/package/base-files/files/etc/uci-defaults/990_set_argon_primary"
+    install -Dm544 "$BASE_PATH/patches/991_custom_settings" "$BUILD_DIR/package/base-files/files/etc/uci-defaults/991_custom_settings"
+    install -Dm544 "$BASE_PATH/patches/992_set-wifi-uci.sh" "$BUILD_DIR/package/base-files/files/etc/uci-defaults/992_set-wifi-uci.sh"
 
     if [ -f "$BUILD_DIR/package/emortal/autocore/files/tempinfo" ]; then
         if [ -f "$BASE_PATH/patches/tempinfo" ]; then
@@ -251,17 +276,6 @@ fix_mk_def_depends() {
     sed -i 's/libustream-mbedtls/libustream-openssl/g' $BUILD_DIR/include/target.mk 2>/dev/null
     if [ -f $BUILD_DIR/target/linux/qualcommax/Makefile ]; then
         sed -i 's/wpad-openssl/wpad-mesh-openssl/g' $BUILD_DIR/target/linux/qualcommax/Makefile
-    fi
-}
-
-add_wifi_default_set() {
-    local qualcommax_uci_dir="$BUILD_DIR/target/linux/qualcommax/base-files/etc/uci-defaults"
-    local filogic_uci_dir="$BUILD_DIR/target/linux/mediatek/filogic/base-files/etc/uci-defaults"
-    if [ -d "$qualcommax_uci_dir" ]; then
-        install -Dm755 "$BASE_PATH/patches/992_set-wifi-uci.sh" "$qualcommax_uci_dir/992_set-wifi-uci.sh"
-    fi
-    if [ -d "$filogic_uci_dir" ]; then
-        install -Dm755 "$BASE_PATH/patches/992_set-wifi-uci.sh" "$filogic_uci_dir/992_set-wifi-uci.sh"
     fi
 }
 
@@ -294,6 +308,7 @@ remove_something_nss_kmod() {
         sed -i '/kmod-qca-nss-drv-wifi-meshmgr/d' "$ipq_mk_path"
         sed -i '/kmod-qca-nss-macsec/d' "$ipq_mk_path"
 
+        sed -i 's/automount //g' "$ipq_mk_path"
         sed -i 's/cpufreq //g' "$ipq_mk_path"
     fi
 }
@@ -642,6 +657,10 @@ function add_backup_info_to_sysupgrade() {
 /etc/AdGuardHome.yaml
 /etc/easytier
 /etc/lucky/
+/www/ai/
+/www/sp/
+/www/ip/
+/www/myip/
 EOF
     fi
 }
@@ -917,12 +936,12 @@ config server '_lan'
         option ssl_session_timeout '64m'
         option access_log 'off; # logd openwrt'
 
-config server 'http_only'
-        list listen '80'
-        list listen '[::]:80'
-        option server_name 'http_only'
-        list include 'conf.d/*.locations'
-        option access_log 'off; # logd openwrt'
+config server 'default_server'
+		option server_name 'op/'
+		list include 'conf.d/*.locations'
+		option access_log 'off; # logd openwrt'
+		list listen '80 default_server'
+		list listen '[::]:80 default_server'
 EOF
     fi
 
@@ -946,6 +965,78 @@ EOF
         fi
     fi
 }
+
+add_nginx_default_config() {
+    local nginx_config_path="$BUILD_DIR/feeds/packages/net/nginx-util/files/nginx.config"
+
+    # 只在不存在 default_server 时才追加
+    if [ -f "$nginx_config_path" ] && ! grep -q "config server 'default_server'" "$nginx_config_path"; then
+        cat >> "$nginx_config_path" <<'EOF'
+
+config server 'default_server'
+        option server_name 'op/'
+        list listen '80 default_server'
+        list listen '[::]:80 default_server'
+        list include 'conf.d/*.locations'
+        option access_log 'off; # logd openwrt'
+EOF
+    fi
+}
+
+set_n2n_default_config() {
+    local n2n_config_path="$BUILD_DIR/feeds/packages/net/n2n/files/n2n.config"
+
+    # 如果文件存在则覆盖写入；不存在则创建
+    if [ -f "$n2n_config_path" ]; then
+        echo "修改 n2n 默认配置: $n2n_config_path"
+    else
+        echo "n2n.config 不存在，自动新建: $n2n_config_path"
+        mkdir -p "$(dirname "$n2n_config_path")"
+    fi
+
+    cat > "$n2n_config_path" << 'EOF'
+config edge
+	option enabled '0'
+	option tunname 'n2n3'
+	option mode 'static'
+	option ipaddr '192.168.0.3'
+	option prefix '28'
+	option mtu '1290'
+	option supernode 'n2n.moyann.com'
+	option port '10090'
+	option community 'mhy2025'
+	option key 'mhy202588'
+	option route '1'
+	option masquerade '0'
+
+config supernode
+	option enabled '0'
+	option port '1235'
+	option subnet '10.0.0.0-10.0.0.0/24'
+
+config route
+	option enabled '1'
+	option ip '192.168.2.0'
+	option mask '24'
+	option gw '192.168.0.2'
+	option desc 'home'
+EOF
+}
+
+# 修改 homeproxy 的 subscription 配置，追加 subscription_url
+add_homeproxy_subscription_url() {
+    local cfg="$BUILD_DIR/feeds/small8/luci-app-homeproxy/root/etc/config/homeproxy"
+    local newline="list subscription_url 'https://t2.s20250918.dpdns.org/cfcfcf/pty'"
+
+    # 如果已经存在，则不追加
+    grep -qF "$newline" "$cfg" && return
+
+    # 在 config homeproxy 'subscription' 段内追加
+    sed -i "/config homeproxy 'subscription'/,/^config homeproxy/ {
+        /list filter_keywords 'Expiration|Remaining'/a $newline
+    }" "$cfg"
+}
+
 
 update_uwsgi_limit_as() {
     # 更新 uwsgi 的 limit-as 配置，将其值更改为 8192
@@ -1032,7 +1123,6 @@ main() {
     update_golang
     change_dnsmasq2full
     fix_mk_def_depends
-    add_wifi_default_set
     update_default_lan_addr
     remove_something_nss_kmod
     update_affinity_script
@@ -1040,10 +1130,9 @@ main() {
     # fix_mkpkg_format_invalid
     change_cpuusage
     update_tcping
-    add_ax6600_led
+#    add_ax6600_led
     set_custom_task
     apply_passwall_tweaks
-    install_opkg_distfeeds
     update_nss_pbuf_performance
     set_build_signature
     update_nss_diag
@@ -1056,24 +1145,29 @@ main() {
     update_oaf_deconfig
     add_timecontrol
     add_gecoosac
-    add_quickfile
-    update_lucky
+ #   add_quickfile
+ #   update_lucky
     fix_rust_compile_error
     update_smartdns
     update_diskman
-    set_nginx_default_config
+#    set_nginx_default_config
+    add_nginx_default_config
+	set_n2n_default_config
+	add_homeproxy_subscription_url
     update_uwsgi_limit_as
     update_argon
-    update_nginx_ubus_module # 更新 nginx-mod-ubus 模块
+ #   update_nginx_ubus_module # 更新 nginx-mod-ubus 模块
+    check_default_settings
+    install_opkg_distfeeds
     install_feeds
     fix_easytier_lua
-    update_adguardhome
+#    update_adguardhome
     update_script_priority
     update_geoip
     update_package "runc" "releases" "v1.2.6"
     update_package "containerd" "releases" "v1.7.27"
-    update_package "docker" "tags" "v28.2.2"
-    update_package "dockerd" "releases" "v28.2.2"
+#    update_package "docker" "tags" "v28.2.2"
+#    update_package "dockerd" "releases" "v28.2.2"
     # apply_hash_fixes # 调用哈希修正函数
 }
 
