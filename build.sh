@@ -16,7 +16,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 set -e
-
 BASE_PATH=$(cd $(dirname $0) && pwd)
 
 Dev=$1
