@@ -23,10 +23,8 @@ set -o errtrace
 error_handler() {
     echo "Error occurred in script at line: ${BASH_LINENO[0]}, command: '${BASH_COMMAND}'"
 }
-
 # 增加编译时间显示
 BUILD_DATE=$(date '+%Y.%m.%d')
-
 # 设置trap捕获ERR信号
 trap 'error_handler' ERR
 
@@ -307,6 +305,8 @@ remove_something_nss_kmod() {
         sed -i '/kmod-qca-nss-drv-vxlanmgr/d' "$ipq_mk_path"
         sed -i '/kmod-qca-nss-drv-wifi-meshmgr/d' "$ipq_mk_path"
         sed -i '/kmod-qca-nss-macsec/d' "$ipq_mk_path"
+
+#       sed -i 's/automount //g' "$ipq_mk_path"
         sed -i 's/cpufreq //g' "$ipq_mk_path"
     fi
 }
@@ -663,6 +663,20 @@ EOF
     fi
 }
 
+update_firewall_defaults() {
+    local cfg="$BUILD_DIR/package/network/config/firewall/files/firewall.config"
+
+    # 若已修改，则跳过
+    grep -q "option input 'ACCEPT'" "$cfg" && return
+
+    # 修改默认策略为 ACCEPT
+    sed -i "/^config defaults/,/^config / {
+        s/option input 'REJECT'/option input 'ACCEPT'/
+        s/option forward 'REJECT'/option forward 'ACCEPT'/
+    }" "$cfg"
+}
+
+
 # 更新启动顺序
 function update_script_priority() {
     # 更新qca-nss驱动的启动顺序
@@ -691,6 +705,55 @@ update_mosdns_deconfig() {
         sed -i 's/5335/5336/g' "$mosdns_conf"
     fi
 }
+
+update_mosdns_config() {
+    local cfg="$BUILD_DIR/feeds/small8/luci-app-mosdns/root/etc/config/mosdns"
+
+    # 若已修改，则跳过
+    grep -q "option enabled '1'" "$cfg" && return
+
+    cat > "$cfg" <<'EOF'
+config mosdns 'config'
+	option enabled '1'
+	option listen_port '5336'
+	option geo_auto_update '0'
+	option geo_update_week_time '*'
+	option geo_update_day_time '2'
+	option configfile '/var/etc/mosdns.json'
+	option log_level 'error'
+	option log_file '/var/log/mosdns.log'
+	option cache '1'
+	option concurrent '2'
+	option idle_timeout '30'
+	option minimal_ttl '0'
+	option maximum_ttl '0'
+	option enable_pipeline '1'
+	option insecure_skip_verify '0'
+	option dns_leak '1'
+	option cloudflare '1'
+	option listen_port_api '9090'
+	option bootstrap_dns '223.5.5.5'
+	option redirect '1'
+	option prefer_ipv4 '1'
+	option enable_ecs_remote '0'
+	option cache_size '300'
+	option lazy_cache_ttl '86400'
+	option dump_file '1'
+	option prefer_ipv4_cn '1'
+	option custom_local_dns '1'
+	list local_dns 'https://dns.alidns.com/dns-query'
+	list local_dns 'h3://dns.alidns.com/dns-query'
+	list remote_dns 'tls://8.8.4.4'
+	list remote_dns 'tls://208.67.222.222'
+	option dump_interval '3600'
+	list cloudflare_ip '162.159.45.2'
+	list cloudflare_ip '162.159.45.28'
+	list cloudflare_ip '162.159.45.88'
+	option adblock '1'
+	list ad_source 'https://raw.githubusercontent.com/neodevpro/neodevhost/master/domain'
+EOF
+}
+
 
 fix_quickstart() {
     local file_path="$BUILD_DIR/feeds/small8/luci-app-quickstart/luasrc/controller/istore_backend.lua"
@@ -1035,6 +1098,16 @@ add_homeproxy_subscription_url() {
     }" "$cfg"
 }
 
+update_lxc_conf() {
+    local cfg="$BUILD_DIR/package/feeds/packages/lxc/files/lxc.conf"
+
+    # 防止重复添加
+    grep -q "lxc.lxcpath = /mnt/mmcblk0p27/lxc" "$cfg" && return
+
+    # 处理 lxc.lxcpath 配置
+    sed -i "s|^lxc.lxcpath = /srv/lxc|# lxc.lxcpath = /srv/lxc\nlxc.lxcpath = /mnt/mmcblk0p24/lxc\n# lxc.lxcpath = /mnt/mmcblk2p3/lxc\n# lxc.lxcpath = /mnt/sda1/lxc|" "$cfg"
+}
+
 
 update_uwsgi_limit_as() {
     # 更新 uwsgi 的 limit-as 配置，将其值更改为 8192
@@ -1108,6 +1181,38 @@ update_nginx_ubus_module() {
     fi
 }
 
+add_nginx_sp_locations() {
+    # 目标路径（固件最终 → /etc/nginx/conf.d/sp.locations）
+    local loc_dir="$BUILD_DIR/feeds/packages/net/nginx-util/files/etc/nginx/conf.d"
+    local loc_file="$loc_dir/sp.locations"
+
+    # 创建目录（如果不存在）
+    mkdir -p "$loc_dir"
+
+    # 写入 location 配置
+    cat > "$loc_file" << 'EOF'
+location = /favicon.ico {
+    alias /www/sp/favicon.ico;
+}
+
+location /sp/ip {
+    default_type text/plain;
+    return 200 "${remote_addr}";
+}
+
+location ~ /empty {
+    default_type text/plain;
+    return 200;
+    add_header Access-Control-Allow-Origin *;
+    add_header Access-Control-Allow-Methods "GET, POST";
+    add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0, s-maxage=0";
+    add_header Cache-Control "post-check=0, pre-check=0";
+    add_header Pragma no-cache;
+}
+EOF
+}
+
+
 main() {
     clone_repo
     clean_up
@@ -1139,6 +1244,8 @@ main() {
     update_dnsmasq_conf
     add_backup_info_to_sysupgrade
     update_mosdns_deconfig
+	update_mosdns_config
+	update_firewall_defaults
     fix_quickstart
     update_oaf_deconfig
     add_timecontrol
@@ -1152,6 +1259,7 @@ main() {
     add_nginx_default_config
 	set_n2n_default_config
 	add_homeproxy_subscription_url
+	add_nginx_sp_locations
     update_uwsgi_limit_as
     update_argon
  #   update_nginx_ubus_module # 更新 nginx-mod-ubus 模块
@@ -1162,6 +1270,7 @@ main() {
 #    update_adguardhome
     update_script_priority
     update_geoip
+	update_lxc_conf
     update_package "runc" "releases" "v1.2.6"
     update_package "containerd" "releases" "v1.7.27"
 #    update_package "docker" "tags" "v28.2.2"
