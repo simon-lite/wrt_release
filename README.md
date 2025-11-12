@@ -31,7 +31,7 @@ sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_e
 
 ### 京东云亚瑟(01)、兆能M2**:
     ```bash
-    ./build.sh ipq60xx_immwrt
+    ./build.sh jdm2
     ```
 *   **雅典娜(02)、亚瑟(01)、太乙(07)、AX5(JDC版)**:
     ```bash
